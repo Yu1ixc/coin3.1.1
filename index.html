@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>有高有矮的小山</title>
+
+  <style>
+    @font-face{
+      font-family: "BpmfZihiKaiStd";
+      src: url("./BpmfZihiKaiStd-Regular.ttf") format("truetype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root{
+      --bg1:#0b1020;
+      --text:#eaf0ff;
+      --muted:#a9b7e6;
+      --accent:#7aa7ff;
+      --good:#7dffa8;
+      --bad:#ff7d9a;
+      --shadow: 0 18px 50px rgba(0,0,0,.35);
+      --mountainWidth: 320px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    html, body{
+      width:100%;
+      height:100%;
+      margin:0;
+      overflow:hidden;
+      font-family: "BpmfZihiKaiStd", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 600px at 50% 0%, #1b2a57 0%, var(--bg1) 55%, #070a14 100%);
+    }
+
+    .app{
+      width:100vw;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topbar{
+      padding:18px 22px;
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      flex: 0 0 auto;
+    }
+
+    .spacer{ width: 1px; height: 1px; }
+
+    .status{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      font-size:18px;
+      color:var(--muted);
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      padding:12px 14px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      background: rgba(0,0,0,.16);
+      display:flex;
+      gap:10px;
+      align-items:center;
+      white-space:nowrap;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(122,167,255,.18);
+      flex: 0 0 auto;
+    }
+
+    .main{
+      flex: 1 1 auto;
+      padding: 22px 18px 18px;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;
+      background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.22));
+      overflow:hidden;
+    }
+
+    .question{
+      text-align:center;
+      font-size:34px;
+      font-weight:900;
+      letter-spacing:.6px;
+      margin: 10px 0 18px;
+      flex: 0 0 auto;
+    }
+
+    .choices{
+      flex: 1 1 auto;
+      display:flex;
+      justify-content:center;
+      gap: min(8vw, 120px);
+      align-items:flex-end;
+      padding: 10px 0 6px;
+      overflow:hidden;
+    }
+
+    .mountainBtn{
+      width: var(--mountainWidth);
+      border:none;
+      background: transparent;
+      padding:0;
+      cursor:pointer;
+      outline: none;
+      transition: transform .12s ease, filter .12s ease;
+      touch-action: manipulation;
+    }
+    .mountainBtn:active{ transform: scale(.99); }
+    .mountainBtn:focus-visible{
+      outline: 3px solid rgba(122,167,255,.35);
+      outline-offset: 4px;
+      border-radius: 18px;
+    }
+
+    .mountWrap{
+      width: var(--mountainWidth);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+      overflow:hidden;
+    }
+
+    .label{
+      font-size:22px;
+      color: var(--muted);
+      letter-spacing:.6px;
+      user-select:none;
+      flex: 0 0 auto;
+      font-weight: 800;
+    }
+
+    .mountainSvg{
+      width: var(--mountainWidth);
+      display:block;
+      border-radius: 18px;
+      overflow: visible;
+      filter: drop-shadow(0 18px 18px rgba(0,0,0,.28));
+    }
+
+    /* ===== 答對/答錯短提示（放大） ===== */
+    .toastOverlay{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.50);
+      z-index:60;
+      padding: 18px;
+    }
+    .toast{
+      min-width: 360px;          /* 放大視窗 */
+      max-width: 96vw;
+      padding: 26px 26px;        /* 放大內距 */
+      border-radius: 26px;       /* 放大圓角 */
+      border: 1px solid rgba(255,255,255,.16);
+      background: linear-gradient(180deg, rgba(20,27,47,.97), rgba(10,14,26,.95));
+      box-shadow: var(--shadow);
+      text-align:center;
+      font-family: "BpmfZihiKaiStd", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif;
+    }
+    .toast .big{
+      font-size:40px;            /* 放大文字 */
+      font-weight:950;
+      letter-spacing:.8px;
+      margin:0 0 10px;
+      line-height:1.2;
+    }
+    .toast .small{
+      font-size:20px;            /* 放大文字 */
+      color: var(--muted);
+      margin:0;
+      line-height:1.4;
+    }
+
+    /* Modal（開始 / 結束） */
+    .modalOverlay{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.58);
+      z-index:90;
+      padding: 18px;
+    }
+    .modal{
+      width:min(640px, 96vw);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(20,27,47,.98), rgba(10,14,26,.96));
+      box-shadow: var(--shadow);
+      padding: 20px 18px 18px;
+      text-align:center;
+      font-family: "BpmfZihiKaiStd", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif;
+    }
+    .modal h2{
+      margin: 6px 0 12px;
+      font-size:30px;
+      font-weight:950;
+      letter-spacing:.6px;
+    }
+    .modal p{
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size:20px;
+      line-height:1.7;
+      white-space: pre-line;
+    }
+    .btnRow{
+      display:flex;
+      justify-content:center;
+      margin-top: 8px;
+    }
+    .primaryBtn{
+      border:none;
+      cursor:pointer;
+      padding: 14px 20px;
+      border-radius: 16px;
+      font-weight:900;
+      letter-spacing:.4px;
+      font-size:20px;
+      color:#071022;
+      background: linear-gradient(180deg, #9ec0ff, #6ea3ff);
+      box-shadow: 0 14px 34px rgba(110,163,255,.26);
+      transition: transform .12s ease;
+      font-family: "BpmfZihiKaiStd", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif;
+    }
+    .primaryBtn:active{ transform: scale(.99); }
+    .primaryBtn:focus-visible{ outline: 3px solid rgba(122,167,255,.35); outline-offset: 3px; }
+
+    /* 小螢幕：避免溢出，同時仍維持放大感 */
+    @media (max-width: 720px){
+      :root{ --mountainWidth: 260px; }
+      .question{ font-size:30px; }
+      .modal p{ font-size:18px; }
+      .status{ font-size:16px; }
+      .pill{ padding:10px 12px; }
+      .label{ font-size:20px; }
+      .toast{ min-width: 300px; padding: 22px 22px; }
+      .toast .big{ font-size:34px; }
+      .toast .small{ font-size:18px; }
+    }
+    @media (max-width: 520px){
+      :root{ --mountainWidth: 230px; }
+      .question{ font-size:26px; }
+      .choices{ gap: 22px; }
+      .label{ font-size:18px; }
+      .toast{ min-width: 260px; padding: 20px 18px; }
+      .toast .big{ font-size:30px; }
+      .toast .small{ font-size:16px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="spacer" aria-hidden="true"></div>
+      <div class="status">
+        <div class="pill"><span class="dot"></span><span id="roundInfo">第 1 題/共 3 題</span></div>
+        <div class="pill">答對題數 <strong id="scoreInfo" style="color:var(--text);font-weight:950;">0</strong></div>
+      </div>
+    </div>
+
+    <div class="main" id="main">
+      <div class="question" id="questionText">載入中…</div>
+
+      <div class="choices" id="choices">
+        <div class="mountWrap">
+          <button class="mountainBtn" id="btnLeft" aria-label="左邊的山">
+            <svg class="mountainSvg" id="svgLeft" viewBox="0 0 260 260" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="skyL" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#1b2a57" stop-opacity="0.9"/>
+                  <stop offset="1" stop-color="#0b1020" stop-opacity="0.9"/>
+                </linearGradient>
+                <linearGradient id="mountL" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#9fb5ff" stop-opacity="0.55"/>
+                  <stop offset="1" stop-color="#4b5ea8" stop-opacity="0.75"/>
+                </linearGradient>
+                <linearGradient id="snowL" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+                  <stop offset="1" stop-color="#cfe0ff" stop-opacity="0.75"/>
+                </linearGradient>
+              </defs>
+
+              <rect x="0" y="0" width="260" height="260" rx="18" fill="url(#skyL)" opacity="0.95"></rect>
+              <polygon points="0,260 130,18 260,260" fill="url(#mountL)"></polygon>
+              <polygon points="112,72 130,18 148,72 137,66 130,76 123,66" fill="url(#snowL)" opacity="0.95"></polygon>
+              <polygon points="0,260 130,18 260,260 210,260 130,110 50,260" fill="#0a0f1f" opacity="0.12"></polygon>
+            </svg>
+          </button>
+          <div class="label">A山</div>
+        </div>
+
+        <div class="mountWrap">
+          <button class="mountainBtn" id="btnRight" aria-label="右邊的山">
+            <svg class="mountainSvg" id="svgRight" viewBox="0 0 260 260" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="skyR" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#2a1b57" stop-opacity="0.9"/>
+                  <stop offset="1" stop-color="#0b1020" stop-opacity="0.9"/>
+                </linearGradient>
+                <linearGradient id="mountR" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffc2d7" stop-opacity="0.45"/>
+                  <stop offset="1" stop-color="#a84b6a" stop-opacity="0.70"/>
+                </linearGradient>
+                <linearGradient id="snowR" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+                  <stop offset="1" stop-color="#ffe6ef" stop-opacity="0.75"/>
+                </linearGradient>
+              </defs>
+
+              <rect x="0" y="0" width="260" height="260" rx="18" fill="url(#skyR)" opacity="0.95"></rect>
+              <polygon points="0,260 130,18 260,260" fill="url(#mountR)"></polygon>
+              <polygon points="112,72 130,18 148,72 137,66 130,76 123,66" fill="url(#snowR)" opacity="0.95"></polygon>
+              <polygon points="0,260 130,18 260,260 210,260 130,110 50,260" fill="#0a0f1f" opacity="0.12"></polygon>
+            </svg>
+          </button>
+          <div class="label">B山</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toastOverlay" id="toastOverlay" aria-hidden="true">
+    <div class="toast">
+      <p class="big" id="toastBig">答對了</p>
+      <p class="small" id="toastSmall">下一題</p>
+    </div>
+  </div>
+
+  <div class="modalOverlay" id="startOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+      <h2 id="startTitle">有高有矮的小山</h2>
+      <p id="startText"></p>
+      <div class="btnRow">
+        <button class="primaryBtn" id="btnStart">開始遊戲</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalOverlay" id="endOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+      <h2 id="endTitle">完成本回合</h2>
+      <p id="endText">你答對了 0 / 3 題。</p>
+      <div class="btnRow">
+        <button class="primaryBtn" id="btnRestart">再玩一次</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const TOTAL_QUESTIONS = 3;
+      const MIN_M = 500;
+      const MAX_M = 3500;
+      const MIN_GAP_RATIO = 0.18;
+      const MIN_DISPLAY_PX = 140;
+
+      const main = document.getElementById('main');
+      const questionText = document.getElementById('questionText');
+      const roundInfo = document.getElementById('roundInfo');
+      const scoreInfo = document.getElementById('scoreInfo');
+
+      const btnLeft = document.getElementById('btnLeft');
+      const btnRight = document.getElementById('btnRight');
+
+      const svgLeft = document.getElementById('svgLeft');
+      const svgRight = document.getElementById('svgRight');
+
+      const toastOverlay = document.getElementById('toastOverlay');
+      const toastBig = document.getElementById('toastBig');
+      const toastSmall = document.getElementById('toastSmall');
+
+      const startOverlay = document.getElementById('startOverlay');
+      const startText = document.getElementById('startText');
+      const btnStart = document.getElementById('btnStart');
+
+      const endOverlay = document.getElementById('endOverlay');
+      const endText = document.getElementById('endText');
+      const btnRestart = document.getElementById('btnRestart');
+
+      let qIndex = 0;
+      let score = 0;
+      let locked = false;
+      let cur = null;
+      let startedOnce = false;
+
+      function randInt(min, max){
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+      function shuffle2(a,b){
+        return Math.random() < 0.5 ? [a,b] : [b,a];
+      }
+      function clamp(v, min, max){
+        return Math.max(min, Math.min(max, v));
+      }
+      function punctuatedLineBreaks(text){
+        return text.replace(/([。！？；：、，])/g, '$1\n').trim();
+      }
+
+      function pickHeights(){
+        let a, b;
+        for(let tries=0; tries<250; tries++){
+          a = randInt(MIN_M, MAX_M);
+          b = randInt(MIN_M, MAX_M);
+          if(a === b) continue;
+
+          const hi = Math.max(a,b);
+          const lo = Math.min(a,b);
+          const gap = (hi - lo) / hi;
+          if(gap >= MIN_GAP_RATIO) return [a,b];
+        }
+        a = randInt(MIN_M, MAX_M);
+        b = randInt(MIN_M, Math.max(MIN_M, MAX_M - 200));
+        if(a === b) b = a - 200;
+        return [a,b];
+      }
+
+      function getMaxDisplayPx(){
+        const mainH = main.clientHeight || 600;
+        const qH = questionText.offsetHeight || 60;
+        const reserve = 160;
+        const available = Math.max(220, mainH - qH - reserve);
+        return clamp(available, 220, 560);
+      }
+
+      function computeDisplayHeights(leftM, rightM){
+        const MAX_DISPLAY_PX = getMaxDisplayPx();
+        const maxM = Math.max(leftM, rightM);
+        const scale = MAX_DISPLAY_PX / maxM;
+
+        let leftPx = leftM * scale;
+        let rightPx = rightM * scale;
+
+        const minPx = Math.min(leftPx, rightPx);
+        if(minPx < MIN_DISPLAY_PX){
+          const boost = MIN_DISPLAY_PX / minPx;
+          leftPx *= boost;
+          rightPx *= boost;
+        }
+
+        const afterMax = Math.max(leftPx, rightPx);
+        if(afterMax > MAX_DISPLAY_PX){
+          const shrink = MAX_DISPLAY_PX / afterMax;
+          leftPx *= shrink;
+          rightPx *= shrink;
+        }
+
+        return { leftPx, rightPx };
+      }
+
+      function setMountainHeights(leftM, rightM){
+        const { leftPx, rightPx } = computeDisplayHeights(leftM, rightM);
+        svgLeft.style.height = leftPx.toFixed(3) + 'px';
+        svgRight.style.height = rightPx.toFixed(3) + 'px';
+      }
+
+      function buildQuestion(){
+        const [m1, m2] = pickHeights();
+        const [leftM, rightM] = shuffle2(m1, m2);
+        const ask = Math.random() < 0.5 ? 'higher' : 'lower';
+
+        let correct;
+        if(ask === 'higher'){
+          correct = (leftM > rightM) ? 'left' : 'right';
+        }else{
+          correct = (leftM < rightM) ? 'left' : 'right';
+        }
+
+        return { leftM, rightM, ask, correct };
+      }
+
+      function updateTopbar(){
+        roundInfo.textContent = `第 ${qIndex} 題/共 ${TOTAL_QUESTIONS} 題`;
+        scoreInfo.textContent = String(score);
+      }
+
+      function renderQuestion(){
+        locked = false;
+        cur = buildQuestion();
+        qIndex += 1;
+
+        updateTopbar();
+
+        questionText.textContent = (cur.ask === 'higher')
+          ? '找出比較高的山並點擊'
+          : '找出比較矮的山並點擊';
+
+        setMountainHeights(cur.leftM, cur.rightM);
+      }
+
+      function showToast(isCorrect){
+        toastBig.textContent = isCorrect ? '答對了' : '答錯了';
+        toastBig.style.color = isCorrect ? 'var(--good)' : 'var(--bad)';
+        toastSmall.textContent = (qIndex < TOTAL_QUESTIONS) ? '下一題' : '結束本回合';
+
+        toastOverlay.style.display = 'flex';
+        toastOverlay.setAttribute('aria-hidden', 'false');
+
+        setTimeout(() => {
+          toastOverlay.style.display = 'none';
+          toastOverlay.setAttribute('aria-hidden', 'true');
+
+          if(qIndex < TOTAL_QUESTIONS){
+            renderQuestion();
+          }else{
+            endRound();
+          }
+        }, 700);
+      }
+
+      function endRound(){
+        endText.textContent = `你答對了 ${score} / ${TOTAL_QUESTIONS} 題。`;
+        endOverlay.style.display = 'flex';
+        endOverlay.setAttribute('aria-hidden', 'false');
+        btnRestart.focus({ preventScroll:true });
+      }
+
+      function restart(){
+        endOverlay.style.display = 'none';
+        endOverlay.setAttribute('aria-hidden', 'true');
+
+        qIndex = 0;
+        score = 0;
+        updateTopbar();
+
+        renderQuestion();
+      }
+
+      function choose(side){
+        if(!startedOnce) return;
+        if(endOverlay.style.display === 'flex') return;
+        if(startOverlay.style.display === 'flex') return;
+        if(locked) return;
+
+        locked = true;
+
+        const isCorrect = (side === cur.correct);
+        if(isCorrect) score += 1;
+        updateTopbar();
+
+        showToast(isCorrect);
+      }
+
+      function showStartOnce(){
+        if(startedOnce) return;
+
+        startText.textContent = punctuatedLineBreaks('每座山的高度不一樣，一起來看看吧！');
+
+        startOverlay.style.display = 'flex';
+        startOverlay.setAttribute('aria-hidden', 'false');
+        btnStart.focus({ preventScroll:true });
+      }
+
+      function startGame(){
+        startedOnce = true;
+        startOverlay.style.display = 'none';
+        startOverlay.setAttribute('aria-hidden', 'true');
+        restart();
+      }
+
+      btnLeft.addEventListener('click', () => choose('left'));
+      btnRight.addEventListener('click', () => choose('right'));
+      btnRestart.addEventListener('click', restart);
+      btnStart.addEventListener('click', startGame);
+
+      startOverlay.addEventListener('click', (e) => e.stopPropagation());
+      endOverlay.addEventListener('click', (e) => e.stopPropagation());
+
+      window.addEventListener('keydown', (e) => {
+        if(e.key === 'Escape' && (startOverlay.style.display === 'flex' || endOverlay.style.display === 'flex')){
+          e.preventDefault();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        if(cur && startedOnce && endOverlay.style.display !== 'flex'){
+          setMountainHeights(cur.leftM, cur.rightM);
+        }
+      });
+
+      showStartOnce();
+    })();
+  </script>
+</body>
+</html>
